@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MediaType {
+  MOVIE
+  TV
+  ANIME
+}
+
+model UserProfile {
+  id          String          @id @default(cuid())
+  guestToken  String          @unique
+  displayName String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  entries     UserTitleEntry[]
+  ratings     UserRating[]
+}
+
+model Title {
+  id             String                 @id @default(cuid())
+  source         String
+  sourceId       String
+  mediaType      MediaType
+  title          String
+  originalTitle  String?
+  synopsis       String?
+  releaseDate    DateTime?
+  posterUrl      String?
+  backdropUrl    String?
+  runtimeMinutes Int?
+  seasons        Int?
+  episodes       Int?
+  status         String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  sourceLinks    ExternalSourceLink[]
+  entries        UserTitleEntry[]
+  ratings        UserRating[]
+  snapshots      ExternalRatingSnapshot[]
+
+  @@unique([source, sourceId])
+}
+
+model ExternalSourceLink {
+  id         String   @id @default(cuid())
+  titleId    String
+  provider   String
+  providerId String
+  url        String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  title      Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+}
+
+model UserTitleEntry {
+  id            String      @id @default(cuid())
+  userProfileId String
+  titleId       String
+  isInWatchlist Boolean     @default(false)
+  isWatched     Boolean     @default(false)
+  watchedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  title         Title       @relation(fields: [titleId], references: [id], onDelete: Cascade)
+
+  @@unique([userProfileId, titleId])
+}
+
+model UserRating {
+  id            String      @id @default(cuid())
+  userProfileId String
+  titleId       String
+  score         Int
+  note          String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  title         Title       @relation(fields: [titleId], references: [id], onDelete: Cascade)
+
+  @@unique([userProfileId, titleId])
+}
+
+model ExternalRatingSnapshot {
+  id         String   @id @default(cuid())
+  titleId    String
+  sourceName String
+  value      String
+  scale      String?
+  votes      Int?
+  url        String?
+  fetchedAt  DateTime @default(now())
+  title      Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+}
